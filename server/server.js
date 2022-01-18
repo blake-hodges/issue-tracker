@@ -6,6 +6,6 @@ const fileServerMiddleware = express.static('public');
 
 app.use('/', fileServerMiddleware);
 
-app.listen(3000, function() {
-    console.log('App started on port 3000')
+app.listen(3001, function() {
+    console.log('App started on port 3001')
 });

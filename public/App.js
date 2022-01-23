@@ -22,34 +22,7 @@ function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Re
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-var initialIssues = [{
-  id: 1,
-  status: 'New',
-  owner: 'Ravan',
-  effort: 5,
-  created: new Date('2022-01-17'),
-  due: undefined,
-  title: 'Error in console when clicking Add'
-}, {
-  id: 2,
-  status: 'Assigned',
-  owner: 'Eddie',
-  effort: 14,
-  created: new Date('2022-01-15'),
-  due: new Date('2022-01-20'),
-  title: 'Missing bottom border on panel'
-}];
-var sampleIssue = {
-  status: 'New',
-  owner: 'Pieta',
-  title: 'Completion date should be optional'
-};
-var sampleIssue2 = {
-  status: 'New',
-  owner: 'Ravan',
-  title: 'Completion datsdfsdfsdfsdfsdfsdfe should be optional'
-};
-
+//placeholder for component to filter the list of issues
 var IssueFilter = /*#__PURE__*/function (_React$Component) {
   _inherits(IssueFilter, _React$Component);
 
@@ -69,7 +42,8 @@ var IssueFilter = /*#__PURE__*/function (_React$Component) {
   }]);
 
   return IssueFilter;
-}(React.Component);
+}(React.Component); //component that contains the table of issues
+
 
 function IssueTable(props) {
   var rowStyle = {
@@ -88,15 +62,17 @@ function IssueTable(props) {
       borderCollapse: "collapse"
     }
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "ID"), /*#__PURE__*/React.createElement("th", null, "Status"), /*#__PURE__*/React.createElement("th", null, "Owner"), /*#__PURE__*/React.createElement("th", null, "Effort"), /*#__PURE__*/React.createElement("th", null, "Created"), /*#__PURE__*/React.createElement("th", null, "Due"), /*#__PURE__*/React.createElement("th", null, "Title"))), /*#__PURE__*/React.createElement("tbody", null, issueRows)));
-}
+} //component that contains the row that holds an individual issue and its properties
+
 
 function IssueRow(props) {
   var style = props.rowStyle;
   var issue = props.issue;
   return /*#__PURE__*/React.createElement("tr", {
     style: style
-  }, /*#__PURE__*/React.createElement("td", null, issue.id), /*#__PURE__*/React.createElement("td", null, issue.status), /*#__PURE__*/React.createElement("td", null, issue.owner), /*#__PURE__*/React.createElement("td", null, issue.effort), /*#__PURE__*/React.createElement("td", null, issue.created.toDateString()), /*#__PURE__*/React.createElement("td", null, issue.due ? issue.due.toDateString() : ''), /*#__PURE__*/React.createElement("td", null, issue.title));
-}
+  }, /*#__PURE__*/React.createElement("td", null, issue.id ? issue.id : " "), /*#__PURE__*/React.createElement("td", null, issue.status ? issue.status : " "), /*#__PURE__*/React.createElement("td", null, issue.owner ? issue.owner : " "), /*#__PURE__*/React.createElement("td", null, issue.effort ? issue.effort : " "), /*#__PURE__*/React.createElement("td", null, issue.created.toDateString()), /*#__PURE__*/React.createElement("td", null, issue.due ? issue.due.toDateString() : ' '), /*#__PURE__*/React.createElement("td", null, issue.title ? issue.title : " "));
+} //component to hold a form to add a new issue
+
 
 var IssueAdd = /*#__PURE__*/function (_React$Component2) {
   _inherits(IssueAdd, _React$Component2);
@@ -111,7 +87,8 @@ var IssueAdd = /*#__PURE__*/function (_React$Component2) {
     _this = _super2.call(this);
     _this.handleSubmit = _this.handleSubmit.bind(_assertThisInitialized(_this));
     return _this;
-  }
+  } //function to handle the submitted data from the form
+
 
   _createClass(IssueAdd, [{
     key: "handleSubmit",
@@ -121,8 +98,10 @@ var IssueAdd = /*#__PURE__*/function (_React$Component2) {
       var issue = {
         owner: form.owner.value,
         title: form.title.value,
-        status: 'New'
-      };
+        //set a new due date that is 10 days from now (ms*s*min*hours*days)
+        due: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 10)
+      }; //pass new issue to the createIssue method passed in props from the IssueList component
+
       this.props.createIssue(issue);
       form.owner.value = "";
       form.title.value = "";
@@ -167,6 +146,13 @@ var IssueList = /*#__PURE__*/function (_React$Component3) {
   }
 
   _createClass(IssueList, [{
+    key: "jsonDateReviver",
+    value: function jsonDateReviver(key, value) {
+      var dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\d');
+      if (dateRegex.test(value)) return new Date(value);
+      return value;
+    }
+  }, {
     key: "componentDidMount",
     value: function componentDidMount() {
       this.loadData();
@@ -176,22 +162,43 @@ var IssueList = /*#__PURE__*/function (_React$Component3) {
     value: function loadData() {
       var _this3 = this;
 
-      setTimeout(function () {
+      var query = "query {\n            issueList {\n                id\n                title\n                status\n                owner\n                created\n                effort\n                due\n            }\n        }";
+      fetch('/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: query
+        })
+      }).then(function (response) {
+        return response.text();
+      }).then(function (res) {
+        var result = JSON.parse(res, _this3.jsonDateReviver);
+
         _this3.setState({
-          issues: initialIssues
+          issues: result.data.issueList
         });
-      }, 500);
+      });
     }
   }, {
     key: "createIssue",
     value: function createIssue(issue) {
-      issue.id = this.state.issues.length + 1;
-      issue.created = new Date();
-      var newIssueList = this.state.issues.slice();
-      newIssueList.push(issue);
-      this.setState({
-        issues: newIssueList
+      var response;
+      var query = "mutation {\n            issueAdd(issue:{\n                title: \"".concat(issue.title, "\",\n                owner: \"").concat(issue.owner, "\",\n                due: \"").concat(issue.due.toISOString(), "\",\n            }) {\n                id\n            }\n        }");
+      fetch('/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: query
+        })
+      }).then(function (res) {
+        response = res;
+        console.log(res);
       });
+      this.loadData();
     }
   }, {
     key: "render",

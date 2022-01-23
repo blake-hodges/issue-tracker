@@ -1,40 +1,10 @@
 
-const initialIssues = [
-    {
-        id: 1,
-        status: 'New',
-        owner: 'Ravan',
-        effort: 5,
-        created: new Date('2022-01-17'),
-        due: undefined,
-        title: 'Error in console when clicking Add'
-    },
-    {
-        id: 2,
-        status: 'Assigned',
-        owner: 'Eddie',
-        effort: 14,
-        created: new Date('2022-01-15'),
-        due: new Date('2022-01-20'),
-        title: 'Missing bottom border on panel'
-
-    }
-]
-
-const sampleIssue = {
-    status: 'New', owner: 'Pieta',
-    title: 'Completion date should be optional'
-};
-
-const sampleIssue2 = {
-    status: 'New', owner: 'Ravan',
-    title: 'Completion datsdfsdfsdfsdfsdfsdfe should be optional'
-};
 
 
 
 
 
+//placeholder for component to filter the list of issues
 
 class IssueFilter extends React.Component {
     render() {
@@ -43,6 +13,8 @@ class IssueFilter extends React.Component {
         );
     }
 }
+
+//component that contains the table of issues
 
 function IssueTable(props) {
         const rowStyle = {border: "1px solid silver", padding: 4};
@@ -69,34 +41,41 @@ function IssueTable(props) {
         )
 }
 
+//component that contains the row that holds an individual issue and its properties
 function IssueRow(props) {
         const style = props.rowStyle;
         const issue = props.issue;
         return (
             <tr style={style}>
-                <td>{issue.id}</td>
-                <td>{issue.status}</td>
-                <td>{issue.owner}</td>
-                <td>{issue.effort}</td>
+                <td>{issue.id ? issue.id : " "}</td>
+                <td>{issue.status ? issue.status : " "}</td>
+                <td>{issue.owner ? issue.owner : " "}</td>
+                <td>{issue.effort ? issue.effort : " "}</td>
                 <td>{issue.created.toDateString()}</td>
-                <td>{issue.due ? issue.due.toDateString() : ''}</td>
-                <td>{issue.title}</td>
+                <td>{issue.due ? issue.due.toDateString() : ' '}</td>
+                <td>{issue.title ? issue.title : " "}</td>
             </tr>
         )
 }
 
+//component to hold a form to add a new issue
 class IssueAdd extends React.Component {
     constructor() {
         super();
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
+    //function to handle the submitted data from the form
     handleSubmit(e) {
         e.preventDefault();
         const form = document.forms.issueAdd;
         const issue = {
-            owner: form.owner.value, title: form.title.value, status: 'New',
+            owner: form.owner.value,
+            title: form.title.value,
+            //set a new due date that is 10 days from now (ms*s*min*hours*days)
+            due: new Date(new Date().getTime() + 1000*60*60*24*10)
         }
+        //pass new issue to the createIssue method passed in props from the IssueList component
         this.props.createIssue(issue);
         form.owner.value = ""; form.title.value = "";
     }
@@ -117,23 +96,64 @@ class IssueList extends React.Component {
         super();
         this.state = { issues: [] };
         this.createIssue = this.createIssue.bind(this);
+
+    }
+    jsonDateReviver(key, value) {
+        const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\d');
+        if (dateRegex.test(value)) return new Date(value);
+        return value;
     }
     componentDidMount() {
-        this.loadData();
-
+        this.loadData()
     }
 
     loadData() {
-        setTimeout(() => {
-            this.setState({ issues: initialIssues });
-        }, 500)
+        const query = `query {
+            issueList {
+                id
+                title
+                status
+                owner
+                created
+                effort
+                due
+            }
+        }`;
+
+        fetch('/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+        })
+        .then(response => response.text())
+        .then(res => {
+            let result = JSON.parse(res, this.jsonDateReviver);
+            this.setState({ issues: result.data.issueList})
+        })
     }
+
     createIssue(issue) {
-        issue.id = this.state.issues.length + 1;
-        issue.created = new Date();
-        const newIssueList = this.state.issues.slice();
-        newIssueList.push(issue);
-        this.setState({ issues: newIssueList });
+        let response;
+        const query = `mutation {
+            issueAdd(issue:{
+                title: "${issue.title}",
+                owner: "${issue.owner}",
+                due: "${issue.due.toISOString()}",
+            }) {
+                id
+            }
+        }`;
+
+        fetch('/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type' : 'application/json'},
+            body: JSON.stringify({ query })
+        })
+        .then(res => {
+            response = res;
+            console.log(res)
+        })
+        this.loadData();
     }
 
 

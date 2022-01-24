@@ -61,7 +61,6 @@ function issueAdd(_, { issue }) {
     issue.id = issueDB.length + 1;
     if (issue.status = undefined) issue.status = 'New';
     issueDB.push(issue);
-    console.log(issue);
     return issue;
 }
 

@@ -1,18 +1,18 @@
 scalar GraphQLDate
 
 type Issue {
-    id: Int!
-    title: String!
-    status: String!
+    id: Int
+    title: String
+    status: String
     owner: String
     effort: Int
-    created: GraphQLDate!
-    due: GraphQLDate!
+    created: GraphQLDate
+    due: GraphQLDate
 }
 
 "Toned down Issue, used as inputs, without server generated values."
 input IssueInputs {
-    title: String!
+    title: String
     "Optional, if not supplied, will be set to 'New'"
     status: String
     owner: String

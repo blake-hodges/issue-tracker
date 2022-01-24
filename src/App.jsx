@@ -1,4 +1,13 @@
+import React from 'react';
+import ReactDOM from 'react-dom';
+//import 'regenerator-runtime/runtime';
 
+const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\d');
+
+function jsonDateReviver(key, value) {
+    if (dateRegex.test(value)) return new Date(value);
+    return value;
+}
 
 
 
@@ -98,16 +107,12 @@ class IssueList extends React.Component {
         this.createIssue = this.createIssue.bind(this);
 
     }
-    jsonDateReviver(key, value) {
-        const dateRegex = new RegExp('^\\d\\d\\d\\d-\\d\\d-\\d\\d');
-        if (dateRegex.test(value)) return new Date(value);
-        return value;
-    }
+
     componentDidMount() {
         this.loadData()
     }
 
-    loadData() {
+    async loadData() {
         const query = `query {
             issueList {
                 id
@@ -120,20 +125,17 @@ class IssueList extends React.Component {
             }
         }`;
 
-        fetch('/graphql', {
+        const response = await fetch('/graphql', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query })
-        })
-        .then(response => response.text())
-        .then(res => {
-            let result = JSON.parse(res, this.jsonDateReviver);
-            this.setState({ issues: result.data.issueList})
-        })
+        });
+        const body = await response.text();
+        const result = JSON.parse(body, jsonDateReviver);
+        this.setState({ issues: result.data.issueList})
     }
 
-    createIssue(issue) {
-        let response;
+    async createIssue(issue) {
         const query = `mutation {
             issueAdd(issue:{
                 title: "${issue.title}",
@@ -144,15 +146,13 @@ class IssueList extends React.Component {
             }
         }`;
 
-        fetch('/graphql', {
+
+        const response = await fetch('/graphql', {
             method: 'POST',
             headers: { 'Content-Type' : 'application/json'},
             body: JSON.stringify({ query })
         })
-        .then(res => {
-            response = res;
-            console.log(res)
-        })
+
         this.loadData();
     }
 

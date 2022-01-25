@@ -82,7 +82,8 @@ class IssueAdd extends React.Component {
             owner: form.owner.value,
             title: form.title.value,
             //set a new due date that is 10 days from now (ms*s*min*hours*days)
-            due: new Date(new Date().getTime() + 1000*60*60*24*10)
+            due: new Date(new Date().getTime() + 1000*60*60*24*10),
+            status: form.status.value
         }
         //pass new issue to the createIssue method passed in props from the IssueList component
         this.props.createIssue(issue);
@@ -94,6 +95,12 @@ class IssueAdd extends React.Component {
             <form name="issueAdd" onSubmit={this.handleSubmit}>
                 <input type="text" name="owner" placeholder="Owner" />
                 <input type="text" name="title" placeholder="Title" />
+                <select name="status">
+                    <option value="New">New</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="Fixed">Fixed</option>
+                    <option value="Closed">Closed</option>
+                </select>
                 <button>Add</button>
             </form>
         );
@@ -136,12 +143,18 @@ class IssueList extends React.Component {
     }
 
     async createIssue(issue) {
-        const query = `mutation {
-            issueAdd(issue:{
-                title: "${issue.title}",
-                owner: "${issue.owner}",
-                due: "${issue.due.toISOString()}",
-            }) {
+        // const query = `mutation {
+        //     issueAdd(issue:{
+        //         title: "${issue.title}",
+        //         owner: "${issue.owner}",
+        //         due: "${issue.due.toISOString()}",
+        //     }) {
+        //         id
+        //     }
+        // }`;
+
+        const query = `mutation issueAdd($issue: IssueInputs!) {
+            issueAdd(issue: $issue) {
                 id
             }
         }`;
@@ -150,7 +163,7 @@ class IssueList extends React.Component {
         const response = await fetch('/graphql', {
             method: 'POST',
             headers: { 'Content-Type' : 'application/json'},
-            body: JSON.stringify({ query })
+            body: JSON.stringify({ query, variables: { issue } })
         })
 
         this.loadData();

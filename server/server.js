@@ -89,7 +89,6 @@ function issueValidate(issue) {
 
 
 function issueAdd(_, { issue }) {
-    console.log(issue);
     issueValidate(issue);
     issue.created = new Date();
     issue.id = issueDB.length + 1;

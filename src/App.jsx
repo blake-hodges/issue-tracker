@@ -10,7 +10,29 @@ function jsonDateReviver(key, value) {
 }
 
 
-
+async function graphQLFetch(query, variables = {}) {
+    try {
+        const response = await fetch('/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, variables })
+        });
+        const body = await response.text();
+        const result = JSON.parse(body, jsonDateReviver);
+        if (result.errors) {
+            const error = result.errors[0];
+            if (error.extensions.code == 'BAD_USER_INPUT') {
+                const details = error.extensions.exception.errors.join('\n ');
+                alert(`${error.message}:\n ${details}`);
+            } else {
+                alert(`${error.extensions.code}: ${error.message}`);
+            }
+        }
+        return result.data;
+    } catch (e) {
+        alert(`Error in sending data to server ${e.message}`);
+    }
+}
 
 
 //placeholder for component to filter the list of issues
@@ -119,6 +141,7 @@ class IssueList extends React.Component {
         this.loadData()
     }
 
+
     async loadData() {
         const query = `query {
             issueList {
@@ -132,26 +155,13 @@ class IssueList extends React.Component {
             }
         }`;
 
-        const response = await fetch('/graphql', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query })
-        });
-        const body = await response.text();
-        const result = JSON.parse(body, jsonDateReviver);
-        this.setState({ issues: result.data.issueList})
+        const data = await graphQLFetch(query);
+        if (data) {
+            this.setState({ issues: data.issueList})
+        }
     }
 
     async createIssue(issue) {
-        // const query = `mutation {
-        //     issueAdd(issue:{
-        //         title: "${issue.title}",
-        //         owner: "${issue.owner}",
-        //         due: "${issue.due.toISOString()}",
-        //     }) {
-        //         id
-        //     }
-        // }`;
 
         const query = `mutation issueAdd($issue: IssueInputs!) {
             issueAdd(issue: $issue) {
@@ -159,14 +169,10 @@ class IssueList extends React.Component {
             }
         }`;
 
-
-        const response = await fetch('/graphql', {
-            method: 'POST',
-            headers: { 'Content-Type' : 'application/json'},
-            body: JSON.stringify({ query, variables: { issue } })
-        })
-
-        this.loadData();
+        const data = await graphQLFetch(query, { issue });
+        if (data) {
+            this.loadData();
+        }
     }
 
 

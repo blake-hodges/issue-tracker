@@ -8,6 +8,7 @@ enum StatusType {
 }
 
 type Issue {
+    _id: Int
     id: Int
     title: String
     status: StatusType

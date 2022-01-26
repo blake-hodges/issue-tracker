@@ -3,39 +3,31 @@ const fs = require('fs');
 const { ApolloServer, UserInputError } = require('apollo-server-express');
 const { GraphQLScalarType } = require('graphql');
 const { Kind } = require('graphql/language');
+const { MongoClient } = require('mongodb');
+require('dotenv').config()
 
 let aboutMessage = "Issue Tracker API";
 
-const issueDB = [
-    {
-        id: 1,
-        status: 'New',
-        owner: 'Ravan',
-        effort: 5,
-        created: new Date('2022-01-17'),
-        due: new Date('2022-01-20'),
-        title: 'Error in console when clicking Add'
-    },
-    {
-        id: 2,
-        status: 'Assigned',
-        owner: 'Eddie',
-        effort: 14,
-        created: new Date('2022-01-15'),
-        due: new Date('2022-01-20'),
-        title: 'Missing bottom border on panel'
+const dbUsername = process.env.MONGODB_USER;
+const dbPass = process.env.MONGOB_PW;
+const database = "issueTracker";
 
-    },
-    {
-        id: 3,
-        status: 'New',
-        owner: 'Blake',
-        effort: 1,
-        created: new Date('2022-01-15'),
-        due: new Date('2022-01-15'),
-        title: ""
-    }
-]
+
+const url = `mongodb+srv://${dbUsername}:${dbPass}@cluster0.0fhve.mongodb.net/${database}?retryWrites=true&w=majority`;
+
+let db;
+
+async function issueList() {
+    const issuesDB = await db.collection('issues').find({}).toArray();
+    return issuesDB;
+}
+
+async function connectToDB() {
+    const client = new MongoClient(url,  { useNewUrlParser: true });
+    await client.connect();
+    console.log('connected to mongodb');
+    db = client.db();
+}
 
 const GraphQLDate = new GraphQLScalarType({
     name: 'GraphQLDate',
@@ -61,7 +53,7 @@ const GraphQLDate = new GraphQLScalarType({
 const resolvers = {
     Query: {
         about: () => aboutMessage,
-        issueList: () => issueDB,
+        issueList,
     },
     Mutation: {
         setAboutMessage,
@@ -73,6 +65,8 @@ const resolvers = {
 function setAboutMessage(_, { message }) {
     return aboutMessage = message;
 }
+
+
 
 function issueValidate(issue) {
     const errors = [];
@@ -91,10 +85,10 @@ function issueValidate(issue) {
 function issueAdd(_, { issue }) {
     issueValidate(issue);
     issue.created = new Date();
-    issue.id = issueDB.length + 1;
+    issue.id = issuesDB.length + 1;
     if (issue.status == undefined) issue.status = 'New';
     issue.effort = 1;
-    issueDB.push(issue);
+    issuesDB.push(issue);
     return issue;
 }
 
@@ -116,6 +110,17 @@ app.use('/', express.static('public'));
 
 server.applyMiddleware({ app, path: '/graphql' });
 
-app.listen(3001, function() {
-    console.log('App started on port 3001')
-});
+
+
+
+
+(async function() {
+    try {
+        await connectToDB();
+        app.listen(3001, function() {
+            console.log('App started on port 3001')
+        });
+    } catch (err) {
+        console.log("error:", err)
+    }
+})();
